@@ -9,6 +9,9 @@
 #include "camara.cpp"
 #define NUM_SUBDIVS 50
 #define GRADO_CURVA 3
+#define NUM_KF 5    //Cantidad de fotogramas clave.
+#define NUM_F 30    //Cantidad de frames entre keyframes.
+#define FPS 30      //Cantidad de fotogramas por segundo.
 
 
 #define PI 3.14159265358979323846
@@ -19,7 +22,7 @@
 
 //Creación del objeto de cámara.
 Camara cam (0, 6, 15,    //Cámara posicionada en el centro.
-            0, 0, 1,    //Cámara viendo hacia el fondo de la pantalla (+Z)
+            0, 0, 4,    //Cámara viendo hacia el fondo de la pantalla (+Z)
             0, 1, 0);   //Cámara sin rotación (UP = +Y)
 //Rotación de la cámara sobre su eje X local (voltear arriba y abajo.)
 GLfloat rotX = 0.0f;
@@ -58,8 +61,73 @@ Punto P[GRADO_CURVA+1] = {
     { -0.8,  2.5, 0}
 };
 
+GLboolean reproduciendo = GL_TRUE; //Se está reproduciendo la animación o no.
+
+//Estructura que define un fotograma clave.
+struct Frame {
+    //Variables de posición en X, Y, Z.
+    float px;
+    float py;
+    float pz;
+    //Variables de rotación en X, Y, Z.
+    float rx;
+    float ry;
+    float rz;
+    //Variables de escala en X, Y, Z.
+    float sx;
+    float sy;
+    float sz;
+};
+typedef struct Frame frame;
+
+//Definición de los fotogramas clave. Se debería hacer uno por cada objeto a animar.
+frame kf[NUM_KF] = {{-4, 2, -4,     0, 0, 0,   1, 1, 1},
+                    { 4, 2, -4,    0, -180, 0,   1, 1, 1}, 
+                    { 4, 2, 4,   0, -270, 0,   1, 1, 1},
+                    { -4, 2, 4,  0, -340, 0,   1, 1, 1},
+                    {-4, 2, -4,   0, -359, 0,   1, 1, 1}};
+frame f;        //Fotograma actual.
+int i_kf = 0;   //Índice del fotograma clave que se se está usando para interpolar.
+int i_f = 0;    //Índice del frame que se está desplegando.
+
+//Función de animación. Aquí deberían ir las animaciones de todos los objetos.
+void animacion(int valor) {
+    if (reproduciendo) {
+        //Si la animación acaba de empezar, se asigna el frame actual como el fotograma clave inicial.
+        if (i_kf == 0 && i_f == 0) {
+            f = kf[0];
+        }
+        //Si no (la animación está corriendo), se calcula el siguiente fotograma.
+        else {
+            f.px += (kf[i_kf+1].px - kf[i_kf].px) / NUM_F;
+            f.py += (kf[i_kf+1].py - kf[i_kf].py) / NUM_F;
+            f.pz += (kf[i_kf+1].pz - kf[i_kf].pz) / NUM_F;
+            f.rx += (kf[i_kf+1].rx - kf[i_kf].rx) / NUM_F;
+            f.ry += (kf[i_kf+1].ry - kf[i_kf].ry) / NUM_F;
+            f.rz += (kf[i_kf+1].rz - kf[i_kf].rz) / NUM_F;
+            f.sx += (kf[i_kf+1].sx - kf[i_kf].sx) / NUM_F;
+            f.sy += (kf[i_kf+1].sy - kf[i_kf].sy) / NUM_F;
+            f.sz += (kf[i_kf+1].sz - kf[i_kf].sz) / NUM_F;
+        }
+        //Se incrementa el índice del frame actual.
+        i_f ++;
+
+        //Si ya se llegó al índice de frame máximo
+        if (i_f >= NUM_F) {
+            i_kf ++;    //Se pasa al siguiente keyframe.
+            i_f = 0;    //Se reinicia el contador de frames.
+            //Si ya se llegó al último keyframe, se reinicia al keyframe inicial.
+            if (i_kf >= NUM_KF-1) i_kf = 0;
+        }
+        //Se solicita el redibujo.
+        glutPostRedisplay();
+    }
+    //Se manda a llamar nuevamente esta función dentro de 1000/FPS milisegundos.
+    glutTimerFunc(1000/FPS, animacion, 0);
+}
+
 Punto *puntos_curva = NULL;
-Punto *normales_curva = NULL;
+//Punto *normales_curva = NULL;
 
 Punto_2 *puntos_curva2 = NULL;
 Punto_2 *normales_cruva2 = NULL;
@@ -76,6 +144,14 @@ ModeloOBJ cubo("./modelos/cubo_tierra.obj","./texturas/hierba.jpg");
 ModeloOBJ cabeza("./modelos/cabeza_v.obj","./texturas/vaca2.jpg");
 ModeloOBJ cuerpo("./modelos/cuerpo_v.obj","./texturas/vaca2.jpg");
 ModeloOBJ pata("./modelos/pata_v_1.obj","./texturas/vaca2.jpg");
+ModeloOBJ cabeza_p("./modelos/phantom_c.obj","./texturas/Phantom.png");
+ModeloOBJ dorso_p("./modelos/phantom_dorso.obj","./texturas/Phantom.png");
+ModeloOBJ cola1_p("./modelos/phantom_C1.obj","./texturas/Phantom.png");
+ModeloOBJ ala1_p("./modelos/phantom_A1.obj","./texturas/Phantom.png");
+ModeloOBJ ala2_p("./modelos/phantom_A2.obj","./texturas/Phantom.png");
+ModeloOBJ ala1_1p("./modelos/phantom_A11.obj","./texturas/Phantom.png");
+ModeloOBJ ala2_1p("./modelos/phantom_A21.obj","./texturas/Phantom.png");
+ModeloOBJ cola2_p("./modelos/phantom_cola.obj","./texturas/Phantom.png");
 
 void config_torre_tex(){
     torre_tex = stbi_load("./texturas/torre.jpg", &ancho_tex_torre, &alto_tex_torre, &num_comps_tex_torre, 0);
@@ -232,10 +308,75 @@ void dibujar_patas(){
     glPopMatrix();
 }
 
+void dibujar_phantom(){
+    glPushMatrix();
+        glPushMatrix();
+            glTranslatef(0,4,0);
+            cabeza_p.dibujar();
+        glPopMatrix();
+
+        glPushMatrix();
+            glTranslatef(-1.5,4,0);
+            glScalef(0.5,0.7,1);
+            dorso_p.dibujar();
+        glPopMatrix();
+        //Dibuja las alas
+        glPopMatrix();
+
+            glPushMatrix();
+
+                glPushMatrix();
+                glTranslatef(-1.5,4.1,1.0);
+                glScalef(0.7,0.25,0.5);
+                ala1_p.dibujar();
+                glPopMatrix();
+
+                glPushMatrix();
+                glTranslatef(-1.55,4.15,2.5);
+                glScalef(2.3,1,2.0);
+                ala1_1p.dibujar();
+                glPopMatrix();
+                
+            glPopMatrix();
+
+            
+            glPushMatrix();
+                glPushMatrix();
+                    glTranslatef(-1.5,4.1,-1.0);
+                    glScalef(0.7,0.25,0.5);
+                    ala2_p.dibujar();
+                glPopMatrix();
+
+                glPushMatrix();
+                    glTranslatef(-1.55,4.15,-2.5);
+                    glScalef(2.3,1,2.0);
+                    ala2_1p.dibujar();
+                glPopMatrix();
+            glPopMatrix();
+        glPushMatrix();
+
+        //Dibuja la cola
+
+        glPushMatrix();
+            glPushMatrix();
+                glTranslatef(-3.0,4,0);
+                glScalef(0.6,0.6,0.6);
+                cola1_p.dibujar();
+            glPopMatrix();
+
+            glPushMatrix();
+                glTranslatef(-4.2,4,0);
+                glScalef(0.5,0.4,0.4);
+                cola2_p.dibujar();
+            glPopMatrix();
+        glPopMatrix();
+    glPopMatrix();
+}
+
 void dibujar_vaca() {
 
     glPushMatrix();
-        glTranslatef(tx, -0.5, tz);
+        glTranslatef(tx+1, -0.5, tz);
         glRotatef(ry, 0, 1, 0);
         glPushMatrix();
             glTranslatef(0,2,0);
@@ -280,9 +421,20 @@ void dibujar() {
                 cam.mView.x, cam.mView.y, cam.mView.z,
                 cam.mUp.x,   cam.mUp.y,   cam.mUp.z);
         glPushMatrix();
+             
+
             glPushMatrix();
                 glTranslatef(0,-1,0);
                 dibujar_piso();
+            glPopMatrix();
+
+            glPushMatrix();
+                // Se hacen las transformaciones con base en el frame actual.
+                glTranslatef(f.px, f.py, f.pz);
+                glRotatef(f.rx, 1, 0, 0);
+                glRotatef(f.ry, 0, 1, 0);
+                glRotatef(f.rz, 0, 0, 1);
+                dibujar_phantom();
             glPopMatrix();
 
             glPushMatrix();
@@ -345,10 +497,15 @@ void activar_luz(int num_luz) {
 
 void teclado (unsigned char key, int x, int y) {
         switch (key) {
-        //PROYECCIÓN
+        //CONTROLES DE ANIMACIÓN
+        //Reproducir/pausar animación
         case 'P': case 'p':
-            proy_orto = !proy_orto;
-            camara();
+            reproduciendo = !reproduciendo;
+            break;
+        //Reiniciar animación
+        case 'R': case 'r':
+            i_kf = 0;
+            i_f = 0;
             break;
         //SOMBREADO
         case ' ':
@@ -477,6 +634,7 @@ void config_OGL(void) {
     config_torre_tex();
     config_tex_punta();
     camara();
+    animacion(0);
 }
 
 int main(int argc, char** argv) {
