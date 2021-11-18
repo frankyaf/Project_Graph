@@ -37,6 +37,19 @@ GLfloat es = 1;
 GLboolean proy_orto = GL_FALSE;
 GLboolean somb_plano = GL_FALSE;
 
+GLUnurbs * sup = NULL;
+
+void init_sup_NURBS(void){
+    //Para habilitar los mapeos para la superficie.
+    glEnable(GL_MAP2_VERTEX_3);
+    glEnable(GL_MAP2_TEXTURE_COORD_2);
+    //Para habilitar la generación automática de normales de la superficie.
+    glEnable(GL_AUTO_NORMAL);
+    sup = gluNewNurbsRenderer();
+    gluNurbsProperty(sup, GLU_DISPLAY_MODE,GLU_FILL);
+}
+
+
 struct t_punto {
     float x;
     float y;
@@ -82,9 +95,9 @@ typedef struct Frame frame;
 
 //Definición de los fotogramas clave. Se debería hacer uno por cada objeto a animar.
 frame kf[NUM_KF] = {{-4, 2, -4,     0, 0, 0,   1, 1, 1},
-                    { 4, 2, -4,    0, -180, 0,   1, 1, 1}, 
-                    { 4, 2, 4,   0, -270, 0,   1, 1, 1},
-                    { -4, 2, 4,  0, -340, 0,   1, 1, 1},
+                    { 4, -1, -4,    -18, -180, 0,   1, 1, 1}, 
+                    { 4, -2, 4,   0, -270, 0,   1, 1, 1},
+                    { -4, 1, 4,  -18, -340, 0,   1, 1, 1},
                     {-4, 2, -4,   0, -359, 0,   1, 1, 1}};
 frame f;        //Fotograma actual.
 int i_kf = 0;   //Índice del fotograma clave que se se está usando para interpolar.
@@ -222,6 +235,31 @@ void revolucion_Y(Punto *puntos, int n, int subdivs) {
 
 }   
 
+void color_a(){
+    //Definición de las componentes ambiental, difusa, especular y brillo.
+    GLfloat comp_amb[] = {0.0, 0.0, 0.0, 1.0};
+    GLfloat comp_dif[] = {0.0, 0.1, 1.0, 1.0};
+    GLfloat comp_esp[] = {1.0, 1.0, 1.0, 0.0};
+    GLfloat shine = 61.20;
+    //Aplicación de las componentes ambiental, difusa, especular y brillo.
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, comp_amb);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, comp_dif);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, comp_esp);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shine);
+}
+
+
+void color_defecto(){
+    GLfloat comp_amb[] = {0.0, 0.0, 0.0, 1.0};
+    GLfloat comp_dif[] = {1.0, 1.0, 1.0, 1.0};
+    GLfloat comp_esp[] = {1.0, 1.0, 1.0, 1.0};
+    GLfloat shine = 91.20;
+    //Aplicación de las componentes ambiental, difusa, especular y brillo.
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, comp_amb);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, comp_dif);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, comp_esp);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shine);
+}
 void dibujar_sup_revolucion(void) {
     glEnable(GL_TEXTURE_2D);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ancho_tex_torre, alto_tex_torre,
@@ -322,35 +360,40 @@ void dibujar_phantom(){
         glPopMatrix();
         //Dibuja las alas
         glPopMatrix();
-
+            
             glPushMatrix();
-
+                glRotatef(f.rx, 1, 0, 0);
                 glPushMatrix();
-                glTranslatef(-1.5,4.1,1.0);
-                glScalef(0.7,0.25,0.5);
-                ala1_p.dibujar();
-                glPopMatrix();
+                    glPushMatrix();
+                    glTranslatef(-1.5,4.1,1.0);
+                    glScalef(0.7,0.25,0.5);
+                    ala1_p.dibujar();
+                    glPopMatrix();
 
-                glPushMatrix();
-                glTranslatef(-1.55,4.15,2.5);
-                glScalef(2.3,1,2.0);
-                ala1_1p.dibujar();
+                    glPushMatrix();
+                    glTranslatef(-1.55,4.15,2.5);
+                    glScalef(2.3,1,2.0);
+                    ala1_1p.dibujar();
+                    glPopMatrix();
                 glPopMatrix();
-                
             glPopMatrix();
 
             
             glPushMatrix();
+                glRotatef(-f.rx, 1, 0, 0); 
                 glPushMatrix();
-                    glTranslatef(-1.5,4.1,-1.0);
-                    glScalef(0.7,0.25,0.5);
-                    ala2_p.dibujar();
-                glPopMatrix();
+                
+                    glPushMatrix();
+                        glTranslatef(-1.5,4.1,-1.0);
+                        glScalef(0.7,0.25,0.5);
+                        ala2_p.dibujar();
+                    glPopMatrix();
 
-                glPushMatrix();
-                    glTranslatef(-1.55,4.15,-2.5);
-                    glScalef(2.3,1,2.0);
-                    ala2_1p.dibujar();
+                    glPushMatrix();
+                        glTranslatef(-1.55,4.15,-2.5);
+                        glScalef(2.3,1,2.0);
+                        ala2_1p.dibujar();
+                    glPopMatrix();
                 glPopMatrix();
             glPopMatrix();
         glPushMatrix();
@@ -374,25 +417,25 @@ void dibujar_phantom(){
 }
 
 void dibujar_vaca() {
-
     glPushMatrix();
-        glTranslatef(tx+1, -0.5, tz);
+        glTranslatef(tx, -0.5, tz);
         glRotatef(ry, 0, 1, 0);
         glPushMatrix();
-            glTranslatef(0,2,0);
-            cabeza.dibujar();
-        glPopMatrix();
+            glPushMatrix();
+                glTranslatef(0,2,0);
+                cabeza.dibujar();
+            glPopMatrix();
 
-        glPushMatrix();
-            glTranslatef(-1.5,1.5,0);
-            glRotatef(180,0,1,0);
-            cuerpo.dibujar();
+            glPushMatrix();
+                glTranslatef(-1.5,1.5,0);
+                glRotatef(180,0,1,0);
+                cuerpo.dibujar();
+            glPopMatrix();
+            
+            glPushMatrix();
+                dibujar_patas();
+            glPopMatrix();
         glPopMatrix();
-        
-        glPushMatrix();
-            dibujar_patas();
-        glPopMatrix();
-
     glPopMatrix();
 }
 
@@ -410,6 +453,41 @@ void dibujar_piso(){
     glPopMatrix();
 }
 
+void dibujar_sup(void){
+    glPushMatrix();
+    init_sup_NURBS();
+    GLfloat Q[5][5][3] = {
+    {{-6, -0.2, 8},    {-6, -1.0, 2.5},    {-5, 0, 0} ,  {-5, 0, -2.5},  {-5, 0, -5}},
+    {{-2.5, 0, 8}, {-2.5, -4, 2.5}, {-2.5, 0, 0} ,{-2.5, 0, -2.5}, {-2.5, 0, -5}},
+    {{ 0, 0, 8},   { 0, 0, 2.5},    { 0, 0, 0} ,  {0, 0, -2.5},   {0, 0, -5}}, 
+    {{ 2.5, 0, 8}, { 2.5, -4, 2.5}, { 2.5, 0, 0} ,{2.5, 0, -2.5}, {2.5, 0, -5}},  
+    {{ 6, -0.2, 8},    { 6, -1.0, 2.5},    { 5, 0, 0} ,  {5, 0, -2.5},   {5, 0, -5}},  
+    }; 
+
+    color_a();
+    GLfloat Ku[10] = {0,0,0,0,0,1,1,1,1,1};
+    GLfloat Kv[10] = {0,0,0,0,0,1,1,1,1,1};
+
+    glEnable(GL_TEXTURE_2D);
+    gluBeginSurface(sup);
+        gluNurbsSurface(sup,
+                        10,Ku,10,Kv,
+                        3,15,&Q[0][0][0],5,5,GL_MAP2_VERTEX_3);
+    gluEndSurface(sup);
+    glDisable(GL_TEXTURE_2D);
+    glPopMatrix();
+}
+
+void ola(void) {
+    glPushMatrix();
+        //dibujar_puntos();
+        glTranslatef(0,-1,0);
+        glRotatef(180, 1, 0, 0);
+        //color_piso();
+        dibujar_sup();
+    glPopMatrix();
+}
+
 void dibujar() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -420,6 +498,7 @@ void dibujar() {
         gluLookAt(cam.mPos.x,  cam.mPos.y,  cam.mPos.z,
                 cam.mView.x, cam.mView.y, cam.mView.z,
                 cam.mUp.x,   cam.mUp.y,   cam.mUp.z);
+        color_defecto();
         glPushMatrix();
              
 
@@ -431,28 +510,33 @@ void dibujar() {
             glPushMatrix();
                 // Se hacen las transformaciones con base en el frame actual.
                 glTranslatef(f.px, f.py, f.pz);
-                glRotatef(f.rx, 1, 0, 0);
                 glRotatef(f.ry, 0, 1, 0);
                 glRotatef(f.rz, 0, 0, 1);
                 dibujar_phantom();
             glPopMatrix();
 
             glPushMatrix();
+                glTranslatef(0,0.0,0);
                 dibujar_vaca();
             glPopMatrix();
 
             glPushMatrix();
                 glPushMatrix();
-                    glTranslatef(4,0,0);
+                    glTranslatef(4,-0.5,0);
                     glScalef(1,3,1);
                     dibujar_sup_revolucion();
                 glPopMatrix();
 
                 glPushMatrix();
-                    glTranslatef(4,7.5,0);
+                    glTranslatef(4,7.0,0);
                     glScalef(1.5,1.0,1.5);
                     dibujar_sup_revolucion_2();
                 glPopMatrix();
+            glPopMatrix();
+
+
+            glPushMatrix();
+                ola();
             glPopMatrix();
         glPopMatrix();
     glPopMatrix();
@@ -555,7 +639,7 @@ void config_GLUT(void) {
     glutInitDisplayMode (GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowPosition(50, 50);
     glutInitWindowSize(800, 600);
-    glutCreateWindow("Textura");
+    glutCreateWindow("Proyecto: Recreacion minecraft");
     glutDisplayFunc(dibujar);
     glutKeyboardFunc(teclado);
     glutReshapeFunc(redimensionar);
@@ -567,7 +651,7 @@ void luz_direccional(void) {
     GLfloat amb[] = {0.0, 0.0, 0.0, 1.0};
     GLfloat dif[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat esp[] = {1.0, 1.0, 1.0, 1.0};    
-    GLfloat pos[] = {0.0, 1.0, 4.0, 0.0};    
+    GLfloat pos[] = {0.0, 2.0, 4.0, 0.0};    
     //Asignación de valores de material y posición a la luz.
     glLightfv(GL_LIGHT0, GL_AMBIENT, amb);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, dif);
@@ -581,15 +665,15 @@ void luz_puntual(void) {
     GLfloat amb[] = {0.0, 0.0, 0.0, 1.0};
     GLfloat dif[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat esp[] = {1.0, 1.0, 1.0, 1.0};
-    GLfloat pos[] = {0.0, 0.0, 0.0, 1.0};    
+    GLfloat pos[] = {3.0, 3.2, -6.0, 1.0};    
     //Asignación de valores de material y posición a la luz
     glLightfv(GL_LIGHT1, GL_AMBIENT, amb);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, dif);
     glLightfv(GL_LIGHT1, GL_SPECULAR, esp);
     glLightfv(GL_LIGHT1, GL_POSITION, pos);
     //Modificación de las constantes de atenuación.
-    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.1);
-    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.1);
+    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.01);
+    //glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.01);
 }
 
 //CONFIGURACIÓN DE LA SPOTLIGHT.
@@ -598,8 +682,8 @@ void luz_spot(void) {
     GLfloat amb[] = {0.0, 0.0, 0.0, 1.0};
     GLfloat dif[] = {1.0, 1.0, 1.0, 1.0};
     GLfloat esp[] = {1.0, 1.0, 1.0, 1.0};    
-    GLfloat pos[] = {0.0, 6.0, 5.0, 1.0};
-    GLfloat dir[] = {0.0, 0.0, -4.0};    
+    GLfloat pos[] = {6.0, 6.0, -2.0, 1.0};
+    GLfloat dir[] = {0.0, 0.0, -5.0};    
     //Asignación de valores de material y posición a la luz.
     glLightfv(GL_LIGHT2, GL_AMBIENT, amb);
     glLightfv(GL_LIGHT2, GL_DIFFUSE, dif);
@@ -607,7 +691,7 @@ void luz_spot(void) {
     glLightfv(GL_LIGHT2, GL_POSITION, pos);
     //Se modifican los parámetros adicionales para el spotlight.
     glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, dir);
-    glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 40.0);
+    glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 50.0);
     glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 3);
 }
 
@@ -629,6 +713,7 @@ void config_OGL(void) {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
     glEnable(GL_TEXTURE_2D);
+    init_sup_NURBS();
     puntos_curva = calcular_curva_bezier(P, GRADO_CURVA, NUM_SUBDIVS);
     puntos_curva2 = calcular_curva_bezier(P_2,GRADO_CURVA,NUM_SUBDIVS);
     config_torre_tex();
