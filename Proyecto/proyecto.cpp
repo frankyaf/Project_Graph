@@ -162,8 +162,8 @@ ModeloOBJ dorso_p("./modelos/phantom_dorso.obj","./texturas/Phantom.png");
 ModeloOBJ cola1_p("./modelos/phantom_C1.obj","./texturas/Phantom.png");
 ModeloOBJ ala1_p("./modelos/phantom_A1.obj","./texturas/Phantom.png");
 ModeloOBJ ala2_p("./modelos/phantom_A2.obj","./texturas/Phantom.png");
-ModeloOBJ ala1_1p("./modelos/phantom_A11.obj","./texturas/Phantom.png");
-ModeloOBJ ala2_1p("./modelos/phantom_A21.obj","./texturas/Phantom.png");
+ModeloOBJ ala1_1p("./modelos/p_ala_11.obj","./texturas/Ala_1.png");
+ModeloOBJ ala2_1p("./modelos/p_ala_21.obj","./texturas/Ala_2.png");
 ModeloOBJ cola2_p("./modelos/phantom_cola.obj","./texturas/Phantom.png");
 
 void config_torre_tex(){
